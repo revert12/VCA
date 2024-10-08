@@ -40,7 +40,7 @@ else
 echo "파일 '$AUTO_UPGRADE_FILE'가 존재하지 않습니다."
 fi
 
-CUDA_VERSION=$(command -v nvcc -V 2>/dev/null)
+CUDA_VERSION=$(nvcc -V 2>/dev/null)
 
 if [ $? -eq 0 ]; then
 echo "CUDA가 정상적으로 설치되었습니다."
