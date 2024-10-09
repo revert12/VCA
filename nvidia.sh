@@ -14,9 +14,10 @@ echo 'export PATH=/usr/local/cuda-11.7/bin:$PATH' >> ~/.bashrc || { echo "Failed
 echo 'export LD_LIBRARY_PATH=/usr/local/cuda-11.7/lib64:$LD_LIBRARY_PATH' >> ~/.bashrc || { echo "Failed to update .bashrc"; exit 1; }
 
 # 변경 사항 적용
-
 source ~/.bashrc || { echo "Failed to source .bashrc"; exit 1; }
 
+# 절전모드 해제
+sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
 
 # disable_auto_updates
 # 자동 업데이트 설정 파일 경로
