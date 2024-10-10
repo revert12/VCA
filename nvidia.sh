@@ -16,8 +16,18 @@ echo 'export LD_LIBRARY_PATH=/usr/local/cuda-11.7/lib64:$LD_LIBRARY_PATH' >> ~/.
 # 변경 사항 적용
 source ~/.bashrc || { echo "Failed to source .bashrc"; exit 1; }
 
-# 절전모드 해제
+
+#전원 관련 서비스 비활성화
 sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
+#AC전원 사용시 자동 슬립 설정 비활성화
+gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 0
+#배터리 사용시 자동 슬립 설정 비활성화
+gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-timeout 0
+#세션 대기시간 설정 비활성화
+gsettings set org.gnome.desktop.session idle-delay 0
+#자동 화면 잠금 비활성화
+gsettings set org.gnome.desktop.screensaver lock-enabled false
+
 
 # disable_auto_updates
 # 자동 업데이트 설정 파일 경로
