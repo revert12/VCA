@@ -64,11 +64,6 @@ disable_power_services() {
 disable_auto_updates() {
     AUTO_UPGRADE_FILE="/etc/apt/apt.conf.d/20auto-upgrades"
 
-    # 스크립트 실행에 대한 권한 확인
-    if [[ $EUID -ne 0 ]]; then
-        log_error "This script must be run as root."
-    fi
-
     # 파일이 존재하는지 확인
     if [[ -f "$AUTO_UPGRADE_FILE" ]]; then
         # 자동 업데이트 비활성화
