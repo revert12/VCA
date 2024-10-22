@@ -38,9 +38,9 @@ install_cuda() {
         fi
     else
         echo "CUDA is not installed. Starting installation."
-        wget https://developer.download.nvidia.com/compute/cuda/11.7.0/local_installers/cuda_11.7.0_515.43.04_linux.run || log_error "Failed to download CUDA installer"
-        chmod +x cuda_11.7.0_515.43.04_linux.run || log_error "Failed to make CUDA installer executable"
-        sudo sh cuda_11.7.0_515.43.04_linux.run || log_error "Failed to install CUDA"
+        wget https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda_11.8.0_520.61.05_linux.run || log_error "Failed to download CUDA installer"
+        chmod +x cuda_11.8.0_520.61.05_linux.run || log_error "Failed to make CUDA installer executable"
+        sudo sh cuda_11.8.0_520.61.05_linux.run || log_error "Failed to install CUDA"
 
         # 환경 변수 설정
         echo "$CUDA_PATH" >> ~/.bashrc || log_error "Failed to update .bashrc"
