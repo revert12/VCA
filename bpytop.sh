@@ -1,17 +1,16 @@
 #!/bin/bash
 
-# sysstat,smartmontools 설치
-if ! command -v iostat &> /dev/null; then
-    echo "Installing sysstat..."
+# snap, bpytop 설치
+if ! command -v bpytop &> /dev/null; then
+    echo "Installing bpytop..."
     sudo apt-get update
-    sudo apt-get install -y sysstat
-    sudo apt-get install -y smartmontools
-else
-    echo "sysstat,smartmontools is already installed."
+    sudo apt-get install -y snapd
+    sudo snapd install -y bpytop
+    echo "snapd, bpytop is already installed."
 fi
 
 
-
+###################################
 
 # sysstat 서비스 시작
 if ! systemctl is-active --quiet sysstat; then
