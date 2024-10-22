@@ -8,43 +8,12 @@ log_error() {
     exit 1
 }
 
-# NVIDIA 드라이버 설치 함수
-install_nvidia_driver() {
-    sudo apt update || log_error "Failed to update package lists"
-
-    if lspci | grep -i nvidia; then
-        echo "NVIDIA graphics card detected."
-    else
-        log_error "No NVIDIA graphics card detected."
-    fi
-
-    # 현재 설치된 NVIDIA 드라이버 확인
-    DRIVER_INSTALLED=$(dpkg -l | grep nvidia-driver)
-
-    if [ -z "$DRIVER_INSTALLED" ]; then
-        echo "NVIDIA driver is not installed. Starting installation."
-
-        # NVIDIA 드라이버 설치
-        sudo apt install -y nvidia-driver-550-server || log_error "Failed to install NVIDIA driver"
-
-        # 설치 확인 후 시스템 재부팅
-        if dpkg -l | grep -q nvidia-driver; then 
-            echo "NVIDIA driver installation completed. Rebooting system."
-            sudo reboot
-        else
-            log_error "NVIDIA driver installation failed."
-        fi
-    else
-        echo "NVIDIA driver is already installed."
-        echo "$DRIVER_INSTALLED"
-    fi
-}
 
 # CUDA 설치 함수
 install_cuda() {
     # CUDA 경로 설정
-    CUDA_PATH='export PATH=/usr/local/cuda-11.7/bin:$PATH'
-    LD_LIBRARY_PATH='export LD_LIBRARY_PATH=/usr/local/cuda-11.7/lib64:$LD_LIBRARY_PATH'
+    CUDA_PATH='export PATH=/usr/local/cuda/bin:$PATH'
+    LD_LIBRARY_PATH='export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH'
 
     # CUDA 설치 확인
     if [ -d /usr/local/cuda ] || nvcc --version &> /dev/null; then
@@ -118,7 +87,6 @@ disable_auto_updates() {
 }
 
 # 메인 실행
-install_nvidia_driver
 install_cuda
 disable_power_services
 disable_auto_updates
