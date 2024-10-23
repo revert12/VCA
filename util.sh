@@ -10,7 +10,6 @@ sudo apt-get update
 # bpytop 설치
 if ! command -v bpytop &> /dev/null; then
     echo "Installing bpytop..."
-    
     sudo snap install -y bpytop
 else
     echo "bpytop is already installed."
