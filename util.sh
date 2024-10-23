@@ -3,7 +3,6 @@
 # 오류 로그를 위한 함수
 log_error() {
     echo "Error: $1"
-    exit 1
 }
 
 # bpytop 설치
