@@ -86,17 +86,6 @@ install_cuda
 disable_power_services
 disable_auto_updates
 
-# CUDA 설치 확인
-CUDA_VERSION=$(nvcc -V 2>/dev/null)
 
-if [ $? -eq 0 ]; then
-    echo "CUDA installation successful."
-    echo "$CUDA_VERSION"
-    # 설치 파일 삭제
-    rm -f cuda_11.7.0_515.43.04_linux.run || log_error "Failed to delete CUDA installer"
-    echo "CUDA installer file deleted."
-else
-    echo "Installer file not found."
-fi
 
-echo "NVIDIA driver and CUDA 11.7 installation complete, environment variables set."
+echo "NVIDIA driver and CUDA 11.8 installation complete, environment variables set."
