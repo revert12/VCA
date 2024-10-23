@@ -1,10 +1,6 @@
 #!/bin/bash
 
-# 스크립트를 실행하기 위해 관리자 권한이 필요합니다
-if [ "$EUID" -ne 0 ]; then
-  echo "이 스크립트는 관리자 권한으로 실행해야 합니다."
-  exit 1
-fi
+
 
 # release-upgrades 설정 파일 경로
 FILE="/etc/update-manager/release-upgrades"
