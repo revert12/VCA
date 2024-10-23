@@ -5,10 +5,12 @@ log_error() {
     echo "Error: $1"
 }
 
+sudo apt-get update
+
 # bpytop 설치
 if ! command -v bpytop &> /dev/null; then
     echo "Installing bpytop..."
-    sudo apt-get update
+    
     sudo snap install -y bpytop
 else
     echo "bpytop is already installed."
@@ -33,6 +35,7 @@ else
     echo "'set number' is already present in ~/.vimrc."
 fi
 
+# net-tools install
 if command -v ifconfig &> /dev/null; then
         echo "net-tools is already installed."
 else 
@@ -42,5 +45,5 @@ else
         log_error "Failed to install net-tools."
     fi
 fi
-sudo apt install net-tools
+
 
