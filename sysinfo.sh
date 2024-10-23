@@ -2,7 +2,7 @@
 
 # 오류 로그 기록 함수
 log_error() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - ERROR: $1"
+    echo "ERROR: $1"
 }
 
 # 시스템 정보 출력 함수
