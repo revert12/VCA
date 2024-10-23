@@ -18,36 +18,29 @@ install_cuda() {
     # CUDA 설치 확인
     if [ -d /usr/local/cuda ] || nvcc --version &> /dev/null; then
         echo "CUDA is already installed."
-
-        # .bashrc에 설정이 이미 존재하는지 확인
-        if ! grep -Fxq "$CUDA_PATH" ~/.bashrc; then
-            echo "$CUDA_PATH" >> ~/.bashrc || log_error "Failed to update .bashrc"
-            source ~/.bashrc || log_error "Failed to source .bashrc"
-            echo "CUDA path added to .bashrc."
-        else
-            echo "CUDA path already exists in .bashrc."
-        fi
-
-        # LD_LIBRARY_PATH 설정 확인 및 추가
-        if ! grep -Fxq "$LD_LIBRARY_PATH" ~/.bashrc; then
-            echo "$LD_LIBRARY_PATH" >> ~/.bashrc || log_error "Failed to update .bashrc"
-            source ~/.bashrc || log_error "Failed to source .bashrc"
-            echo "LD_LIBRARY_PATH added to .bashrc."
-        else
-            echo "LD_LIBRARY_PATH already exists in .bashrc."
-        fi
     else
         echo "CUDA is not installed. Starting installation."
         wget https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda_11.8.0_520.61.05_linux.run || log_error "Failed to download CUDA installer"
         chmod +x cuda_11.8.0_520.61.05_linux.run || log_error "Failed to make CUDA installer executable"
         sudo sh cuda_11.8.0_520.61.05_linux.run || log_error "Failed to install CUDA"
+    fi
 
-        # 환경 변수 설정
-        echo "$CUDA_PATH" >> ~/.bashrc || log_error "Failed to update .bashrc"
-        echo "$LD_LIBRARY_PATH" >> ~/.bashrc || log_error "Failed to update .bashrc"
-        
-        # 변경 사항 적용
-        source ~/.bashrc || log_error "Failed to source .bashrc"
+            # .bashrc에 설정이 이미 존재하는지 확인
+    if ! grep -Fxq "$CUDA_PATH" ~/.bashrc; then
+            echo "$CUDA_PATH" >> ~/.bashrc || log_error "Failed to update .bashrc"
+            source ~/.bashrc || log_error "Failed to source .bashrc"
+            echo "CUDA path added to .bashrc."
+    else
+            echo "CUDA path already exists in .bashrc."
+    fi
+
+        # LD_LIBRARY_PATH 설정 확인 및 추가
+    if ! grep -Fxq "$LD_LIBRARY_PATH" ~/.bashrc; then
+            echo "$LD_LIBRARY_PATH" >> ~/.bashrc || log_error "Failed to update .bashrc"
+            source ~/.bashrc || log_error "Failed to source .bashrc"
+            echo "LD_LIBRARY_PATH added to .bashrc."
+    else
+            echo "LD_LIBRARY_PATH already exists in .bashrc."
     fi
 }
 
