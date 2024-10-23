@@ -22,7 +22,6 @@ else
             echo "Vim installed successfully."
         else
             log_error "Failed to install Vim."
-            exit 1
         fi
 fi
 
@@ -33,4 +32,15 @@ if ! grep -q "set number" ~/.vimrc; then
 else
     echo "'set number' is already present in ~/.vimrc."
 fi
+
+if command -v ifconfig &> /dev/null; then
+        echo "net-tools is already installed."
+else 
+    if sudo apt-get install -y net-tools; then
+        echo "net-tools installed successfully."
+    else
+        log_error "Failed to install net-tools."
+    fi
+fi
+sudo apt install net-tools
 
