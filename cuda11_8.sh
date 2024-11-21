@@ -7,6 +7,43 @@ log_error() {
     echo "Error: $1"
 }
 
+# CUDA 제거 함수
+remove_cuda() {
+    echo "Removing CUDA..."
+
+    # /usr/local/cuda* 디렉토리 삭제
+    if [ -d /usr/local/cuda ]; then
+        sudo rm -rf /usr/local/cuda* || log_error "Failed to remove /usr/local/cuda*"
+        echo "CUDA directories removed."
+    else
+        echo "No CUDA directories found."
+    fi
+
+    # .bashrc에서 CUDA 관련 경로 제거
+    CUDA_PATH='export PATH=/usr/local/cuda/bin:$PATH'
+    LD_LIBRARY_PATH='export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH'
+
+    if grep -Fxq "$CUDA_PATH" ~/.bashrc; then
+        sed -i '/\/usr\/local\/cuda\/bin/d' ~/.bashrc || log_error "Failed to remove PATH from .bashrc"
+        echo "Removed PATH from .bashrc."
+    else
+        echo "PATH for CUDA not found in .bashrc."
+    fi
+
+    if grep -Fxq "$LD_LIBRARY_PATH" ~/.bashrc; then
+        sed -i '/\/usr\/local\/cuda\/lib64/d' ~/.bashrc || log_error "Failed to remove LD_LIBRARY_PATH from .bashrc"
+        echo "Removed LD_LIBRARY_PATH from .bashrc."
+    else
+        echo "LD_LIBRARY_PATH for CUDA not found in .bashrc."
+    fi
+
+    # .bashrc 적용
+    source ~/.bashrc || log_error "Failed to source .bashrc after CUDA removal"
+    echo "CUDA environment variables removed from .bashrc."
+
+    echo "CUDA removal complete."
+}
+
 
 # CUDA 설치 함수
 install_cuda() {
@@ -74,6 +111,7 @@ disable_auto_updates() {
 }
 
 # 메인 실행
+remove_cuda
 install_cuda
 disable_power_services
 disable_auto_updates
