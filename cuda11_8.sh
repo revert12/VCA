@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 의존성 SW, 그래픽 드라이버, CUDA 툴킷 설치
+# 의존성 SW, 그래픽 드라이버, CUDA 툴킷 설치 및 제거 스크립트
 
 # 오류 로그를 위한 함수
 log_error() {
@@ -44,9 +44,10 @@ remove_cuda() {
     echo "CUDA removal complete."
 }
 
-
 # CUDA 설치 함수
 install_cuda() {
+    echo "Installing CUDA..."
+
     # CUDA 경로 설정
     CUDA_PATH='export PATH=/usr/local/cuda/bin:$PATH'
     LD_LIBRARY_PATH='export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH'
@@ -61,61 +62,71 @@ install_cuda() {
         sudo sh cuda_11.8.0_520.61.05_linux.run || log_error "Failed to install CUDA"
     fi
 
-            # .bashrc에 설정이 이미 존재하는지 확인
+    # .bashrc에 설정이 이미 존재하는지 확인
     if ! grep -Fxq "$CUDA_PATH" ~/.bashrc; then
-            echo "$CUDA_PATH" >> ~/.bashrc || log_error "Failed to update .bashrc"
-            source ~/.bashrc || log_error "Failed to source .bashrc"
-            echo "CUDA path added to .bashrc."
+        echo "$CUDA_PATH" >> ~/.bashrc || log_error "Failed to update .bashrc"
+        echo "CUDA path added to .bashrc."
     else
-            echo "CUDA path already exists in .bashrc."
+        echo "CUDA path already exists in .bashrc."
     fi
 
-        # LD_LIBRARY_PATH 설정 확인 및 추가
+    # LD_LIBRARY_PATH 설정 확인 및 추가
     if ! grep -Fxq "$LD_LIBRARY_PATH" ~/.bashrc; then
-            echo "$LD_LIBRARY_PATH" >> ~/.bashrc || log_error "Failed to update .bashrc"
-            source ~/.bashrc || log_error "Failed to source .bashrc"
-            echo "LD_LIBRARY_PATH added to .bashrc."
+        echo "$LD_LIBRARY_PATH" >> ~/.bashrc || log_error "Failed to update .bashrc"
+        echo "LD_LIBRARY_PATH added to .bashrc."
     else
-            echo "LD_LIBRARY_PATH already exists in .bashrc."
+        echo "LD_LIBRARY_PATH already exists in .bashrc."
     fi
+
+    # .bashrc 적용
+    source ~/.bashrc || log_error "Failed to source .bashrc after CUDA installation"
+
+    echo "CUDA installation complete."
 }
 
 # 전원 관련 서비스 비활성화
 disable_power_services() {
+    echo "Disabling power management services..."
     sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
     gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 0
     gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-timeout 0
     gsettings set org.gnome.desktop.session idle-delay 0
     gsettings set org.gnome.desktop.screensaver lock-enabled false
+    echo "Power management services disabled."
 }
 
 # 자동 업데이트 비활성화 함수
 disable_auto_updates() {
     AUTO_UPGRADE_FILE="/etc/apt/apt.conf.d/20auto-upgrades"
 
+    echo "Disabling auto updates..."
     # 파일이 존재하는지 확인
     if [[ -f "$AUTO_UPGRADE_FILE" ]]; then
         # 자동 업데이트 비활성화
-        if grep -q 'APT::Periodic::Update-Package-Lists "1";' "$AUTO_UPGRADE_FILE" && grep -q 'APT::Periodic::Unattended-Upgrade "1";' "$AUTO_UPGRADE_FILE"; then
-            echo "Auto updates are enabled. Disabling..."
-            sudo cp "$AUTO_UPGRADE_FILE" "$AUTO_UPGRADE_FILE.bak" || log_error "Failed to backup auto-upgrades file"
-            sudo sed -i 's/APT::Periodic::Update-Package-Lists "1";/APT::Periodic::Update-Package-Lists "0";/' "$AUTO_UPGRADE_FILE" || log_error "Failed to disable package list updates"
-            sudo sed -i 's/APT::Periodic::Unattended-Upgrade "1";/APT::Periodic::Unattended-Upgrade "0";/' "$AUTO_UPGRADE_FILE" || log_error "Failed to disable unattended upgrades"
-            echo "Auto updates have been disabled."
-        else
-            echo "Auto updates are already disabled."
-        fi
+        sudo cp "$AUTO_UPGRADE_FILE" "$AUTO_UPGRADE_FILE.bak" || log_error "Failed to backup auto-upgrades file"
+        sudo sed -i 's/APT::Periodic::Update-Package-Lists "1";/APT::Periodic::Update-Package-Lists "0";/' "$AUTO_UPGRADE_FILE" || log_error "Failed to disable package list updates"
+        sudo sed -i 's/APT::Periodic::Unattended-Upgrade "1";/APT::Periodic::Unattended-Upgrade "0";/' "$AUTO_UPGRADE_FILE" || log_error "Failed to disable unattended upgrades"
+        echo "Auto updates have been disabled."
     else
         log_error "File '$AUTO_UPGRADE_FILE' does not exist."
     fi
 }
 
 # 메인 실행
-remove_cuda
-install_cuda
+case "$1" in
+    remove)
+        remove_cuda
+        ;;
+    install)
+        install_cuda
+        ;;
+    *)
+        echo "Usage: $0 {remove|install}"
+        exit 1
+        ;;
+esac
+
 disable_power_services
 disable_auto_updates
 
-
-
-echo "NVIDIA driver and CUDA 11.8 installation complete, environment variables set."
+echo "Script execution complete."
