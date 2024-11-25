@@ -60,7 +60,7 @@ install_cuda() {
         echo "CUDA is not installed. Starting installation."
         wget https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run || log_error "Failed to download CUDA installer"
         chmod +x cuda_12.6.3_560.35.05_linux.run || log_error "Failed to make CUDA installer executable"
-        sudo sh cuda_12.6.3_560.35.05_linux.run || log_error "Failed to install CUDA"
+        sudo cuda_12.6.3_560.35.05_linux.run || log_error "Failed to install CUDA"
     fi
 
     # .bashrc에 설정이 이미 존재하는지 확인
