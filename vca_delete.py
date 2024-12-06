@@ -2,7 +2,8 @@
 
 import subprocess
 import os
-import shutil
+
+
 
 def get_service_details(service_name):
     # 서비스의 상세 상태 확인 (systemctl status)
@@ -29,21 +30,23 @@ def delete_service(service_name):
 
 def delete_folder():
     folder_paths = [
-        '/opt/VCA-core',
-        '/var/opt/VCA-core'
+        '/opt/VCA-Core',
+        '/var/opt/VCA-Core'
     ]  # 삭제할 폴더 경로
 
     # 각 폴더에 대해 삭제 시도
     for folder_path in folder_paths:
-        if os.path.exists(folder_path):
-            try:
-                # 비어 있지 않은 폴더도 삭제
-                shutil.rmtree(folder_path)
+        try:
+            if os.path.exists(folder_path):
+                # sudo rm -rf 명령어로 폴더 삭제
+                subprocess.run(['sudo', 'rm', '-rf', folder_path], check=True)
                 print(f"폴더 '{folder_path}'이(가) 삭제되었습니다.")
-            except Exception as e:
-                print(f"폴더 '{folder_path}'을 삭제하는 중 오류 발생: {e}")
-        else:
-            print(f"폴더 '{folder_path}'이(가) 존재하지 않습니다.")
+            else:
+                print(f"폴더 '{folder_path}'이(가) 존재하지 않습니다.")
+        except subprocess.CalledProcessError as e:
+            print(f"폴더 '{folder_path}'을 삭제하는 중 오류 발생: {e}")
+        except Exception as e:
+            print(f"기타 오류 발생: {e}")
 
 
 
