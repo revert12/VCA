@@ -33,30 +33,27 @@ else
 fi
 
 
-# API 요청 보내기
-response=$(curl -s --digest -u "admin:admin" http://127.0.0.1:8080/api/software.json)
+# API 요청 보내기 (wget 사용)
+response=$(wget -qO- --user=admin --password=admin http://127.0.0.1:8080/api/software.json)
 
 # JSON 데이터에서 "string" 키에 해당하는 값만 추출
 string_value=$(echo "$response" | grep -oP '"string":"[^"]+"' | sed 's/"string":"//g' | sed 's/"$//g')
 
 echo -e "\nVCA Version:$string_value"
 
-# API 요청 보내기
-response=$(curl -s --digest -u "admin:admin" http://127.0.0.1:8002/api.json)
+# API 요청 보내기 (wget 사용)
+response=$(wget -qO- --user=admin --password=admin http://127.0.0.1:8002/api.json)
 
 # JSON 데이터에서 "string" 키에 해당하는 값만 추출
 string_value=$(echo "$response" | grep -oP '"string":"[^"]+"' | sed 's/"string":"//g' | sed 's/"$//g')
 
-echo -e "Forencics MetDect Version:$string_value"
+echo -e "Forensics MetDect Version:$string_value"
 
-
-# API 요청 보내기 (digest 인증을 사용)
-response=$(curl -s --digest -u "admin:admin" http://127.0.0.1:8080/api/licenses.json)
+# API 요청 보내기 (wget 사용)
+response=$(wget -qO- --user=admin --password=admin http://127.0.0.1:8080/api/licenses.json)
 
 # 'vca' 항목 전체 추출 (중첩된 항목들도 모두 포함)
 vca_info=$(echo "$response" | grep -oP '"vca":\{.*\}' | sed 's/\\//g')
-
-
 
 # 각 라이센스에 대한 정보를 출력
 for license_info in $(echo "$vca_info" | grep -oP '"\d+":\{.*?\}'); do
@@ -83,8 +80,6 @@ for license_info in $(echo "$vca_info" | grep -oP '"\d+":\{.*?\}'); do
     echo "License token: $license_token"
     echo "License Channels: $channels"
     echo "------------------------------"
-    
 done
-
 # 'vca' 항목 출력 (디버깅용)
 #echo "$vca_info"
