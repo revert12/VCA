@@ -1,7 +1,40 @@
 #!/bin/bash
 exec > sysinfo.txt 2>&1
+
+# Function to fetch API data
+fetch_data() {
+    local url="$1"
+    local user="$2"
+    local password="$3"
+    wget -qO- --user="$user" --password="$password" "$url"
+}
+
+# Function to extract value from JSON response using regex
+extract_value() {
+    local response="$1"
+    local regex="$2"
+    # Extract the matching value and remove unwanted parts
+    echo "$response" | grep -oP "$regex" | sed -E 's/[^:]+:\s*"([^"]+)"/\1/'
+}
+
+# Function to process VCA License Information
+process_license() {
+	license_code=$(echo "$license_info" | grep -oP '"code":\d+' | sed 's/"code"://')
+	channel_value=$(echo "$license_info" | grep -oP '"channels":\d+' | sed 's/"channels"://')
+    local license_info="$1"
+    
+    echo -e "License ID: $(extract_value "$license_info" '"\d+"')"
+    echo -e "License Name: $(extract_value "$license_info" '"name":"[^"]+"')"
+    echo -e "License Code: $license_code"
+    echo -e "License: $(extract_value "$license_info" '"license":\s?"[^"]+"'| fold -w 100)"
+    echo -e "License Token: $(extract_value "$license_info" '"token":"[^"]+"')"
+    echo -e "License Channels: $channel_value"
+    echo "------------------------------"
+}
+
+
 # Display OS version using /etc/os-release
-echo "Operating System Information:"
+echo -e "\nOperating System Information:"
 cat /etc/os-release | grep -E 'NAME|VERSION'
 
 # Display CPU info (model name and physical id)
@@ -33,29 +66,8 @@ else
 fi
 
 
-# API (VCA Version Check)
-response=$(wget -qO- --user=admin --password=admin http://127.0.0.1:8080/api/software.json)
-
-if [ $? -eq 0 ]; then
-    # VCA Version 값 추출
-    string_value=$(echo "$response" | grep -oP '"string":"[^"]+"' | sed 's/"string":"//g' | sed 's/"$//g')
-    echo -e "\nVCA Version:$string_value"
-else
-    echo "Error: Failed to fetch VCA version from the API. Skipping this step."
-fi
-
-# API (VCA GUID Check)
-response=$(wget -qO- --user=admin --password=admin http://127.0.0.1:8080/api/hardware.json)
-
-if [ $? -eq 0 ]; then
-	# Extracting the "guid" value
-	guid=$(echo "$response" | grep -oP '"guid":"\K[^"]+')
-
-	echo -e "Guid:$guid\n"
-fi
 # SSL 인증서 (Forensics Version Check)
 server_cert=$(openssl s_client -connect 127.0.0.1:8000 -showcerts </dev/null 2>/dev/null | openssl x509 -outform PEM)
-
 if [ $? -eq 0 ]; then
     # Post 요청 (Forensics Version Check)
     response=$(wget -qO- \
@@ -77,41 +89,46 @@ if [ $? -eq 0 ]; then
           --header="Accept: application/json" \
           https://127.0.0.1:8000/v1/plugins/info | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
 
-        echo -e "Forensics Version: $version"
+        if [[ "${version: -1}" == "n" ]]; then
+    		# 마지막 문자가 'n'이면 끝에서 두 글자를 삭제
+    		version="${version%??}"
+    		echo -e "\nForensics version: $version"
+		fi
     else
         echo "Error: Token not found in the response. Skipping this step."
     fi
 else
-    echo "Error: Failed to fetch Forensics version from the API. Skipping this step."
+    echo "Error: Failed to fetch Forensics version from the API."
 fi
 
-# API (VCA license Check)
-response=$(wget -qO- --user=admin --password=admin http://127.0.0.1:8080/api/licenses.json)
 
-if [ $? -eq 0 ]; then
-    # vca total (VCA license Check)
-    vca_info=$(echo "$response" | grep -oP '"vca":\{.*\}' | sed 's/\\//g')
+# Loop through ports 8080, 8081, and 8082
+for port in 8080 8081 8082; do
+    
+    
+    # API (VCA Version Check)
+    response=$(fetch_data "http://127.0.0.1:$port/api/software.json" "admin" "admin")
+    if [ $? -eq 0 ]; then
+        string_value=$(extract_value "$response" '"string":"[^"]+"')
+        echo -e "\n==== Checking Port $port ===="
+        echo -e "\nVCA Version (Port $port): $string_value"
+    fi
 
-    for license_info in $(echo "$vca_info" | grep -oP '"\d+":\{.*?\}'); do
-        license_id=$(echo "$license_info" | grep -oP '"\d+"' | tr -d '"')
-        license_name=$(echo "$license_info" | grep -oP '"name":"[^"]+"' | sed 's/"name":"//g' | sed 's/"$//g')
-        license_code=$(echo "$license_info" | grep -oP '"code":\d+' | sed 's/"code"://g')
-        license_=$(echo "$license_info" | grep -oP '"license":\s?"[^"]+"' | sed 's/"license":\s*"//g' | sed 's/"//g' | fold -w 50)
-        license_token=$(echo "$license_info" | grep -oP '"token":"[^"]+"' | sed 's/"token":"//g' | sed 's/"$//g') 
-        channels=$(echo "$license_info" | grep -oP '"channels":\d+' | sed 's/"channels"://g')
-
-        # result
-        echo -e "VCA License:"
-        echo -e "License ID:$license_id"
-        echo -e "License Name:$license_name"
-        echo -e "License Code:$license_code"
-        echo -e "License:\n$license_"
-        echo -e "License token:$license_token"
-        echo -e "License Channels:$channels"
+    # API (VCA GUID Check)
+    response=$(fetch_data "http://127.0.0.1:$port/api/hardware.json" "admin" "admin")
+    if [ $? -eq 0 ]; then
+        guid=$(extract_value "$response" '"guid":"\K[^"]+')
+        echo -e "Guid : $guid"
         echo "------------------------------"
-    done
-else
-    echo "Error: Failed to fetch VCA license Check from the API. Skipping this step."
-fi
-echo -e "services status (port)"
-sudo ss -tulnp | grep -E '8080|8000'
+    fi
+
+    # API (VCA License Check)
+    response=$(fetch_data "http://127.0.0.1:$port/api/licenses.json" "admin" "admin")
+    if [ $? -eq 0 ]; then
+        vca_info=$(echo "$response" | grep -oP '"vca":\{.*\}' | sed 's/\\//g')
+        for license_info in $(echo "$vca_info" | grep -oP '"\d+":\{.*?\}'); do
+            process_license "$license_info"
+        done
+
+    fi
+done
