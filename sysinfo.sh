@@ -87,7 +87,7 @@ if [ $? -eq 0 ]; then
           --method=GET \
           --header="Authorization: Bearer $token" \
           --header="Accept: application/json" \
-          https://127.0.0.1:8000/v1/plugins/info | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
+          https://127.0.0.1:8000/v1/about/server/version | grep -oP '"version": "\K[^"]+')
 
         if [[ "${version: -1}" == "n" ]]; then
     		# 마지막 문자가 'n'이면 끝에서 두 글자를 삭제
