@@ -1,6 +1,9 @@
 #!/bin/bash
 exec > sysinfo.txt 2>&1
 
+server_host=127.0.0.1
+id=admin
+pw=admin
 # Function to fetch API data
 fetch_data() {
     local url="$1"
@@ -67,16 +70,15 @@ fi
 
 
 # SSL 인증서 (Forensics Version Check)
-server_cert=$(openssl s_client -connect 127.0.0.1:8000 -showcerts </dev/null 2>/dev/null | openssl x509 -outform PEM)
+server_cert=$(openssl s_client -connect $server_host:8000 -showcerts </dev/null 2>/dev/null | openssl x509 -outform PEM)
 if [ $? -eq 0 ]; then
     # Post 요청 (Forensics Version Check)
-    response=$(wget -qO- \
-      --ca-certificate=<(echo "$server_cert") \
-      --method=POST \
-      --header="Content-Type: application/json" \
-      --body-data='{"id": "admin", "pw": "admin"}' \
-      https://127.0.0.1:8000/v1/auth/login)
-
+	response=$(wget -qO- \
+  	--ca-certificate=<(echo "$server_cert") \
+  	--method=POST \
+  	--header="Content-Type: application/json" \
+  	--body-data="{\"id\": \"$id\", \"pw\": \"$pw\"}" \
+  	https://$server_host:8000/v1/auth/login)
     # token 값 추출 (Forensics Version Check)
     token=$(echo "$response" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
 
@@ -87,7 +89,7 @@ if [ $? -eq 0 ]; then
           --method=GET \
           --header="Authorization: Bearer $token" \
           --header="Accept: application/json" \
-          https://127.0.0.1:8000/v1/about/server/version | grep -oP '"version": "\K[^"]+')
+          https://$server_host:8000/v1/about/server/version | grep -oP '"version": "\K[^"]+')
 
         if [[ "${version: -1}" == "n" ]]; then
     		# 마지막 문자가 'n'이면 끝에서 두 글자를 삭제
@@ -107,7 +109,7 @@ for port in 8080 8081 8082; do
     
     
     # API (VCA Version Check)
-    response=$(fetch_data "http://127.0.0.1:$port/api/software.json" "admin" "admin")
+    response=$(fetch_data "http://$server_host:$port/api/software.json" "$id" "$pw")
     if [ $? -eq 0 ]; then
         string_value=$(extract_value "$response" '"string":"[^"]+"')
         echo -e "\n==== Checking Port $port ===="
@@ -115,7 +117,7 @@ for port in 8080 8081 8082; do
     fi
 
     # API (VCA GUID Check)
-    response=$(fetch_data "http://127.0.0.1:$port/api/hardware.json" "admin" "admin")
+    response=$(fetch_data "http://$server_host:$port/api/hardware.json" "$id" "$pw")
     if [ $? -eq 0 ]; then
         guid=$(extract_value "$response" '"guid":"\K[^"]+')
         echo -e "Guid : $guid"
@@ -123,7 +125,7 @@ for port in 8080 8081 8082; do
     fi
 
     # API (VCA License Check)
-    response=$(fetch_data "http://127.0.0.1:$port/api/licenses.json" "admin" "admin")
+    response=$(fetch_data "http://$server_host:$port/api/licenses.json" "$id" "$pw")
     if [ $? -eq 0 ]; then
         vca_info=$(echo "$response" | grep -oP '"vca":\{.*\}' | sed 's/\\//g')
         for license_info in $(echo "$vca_info" | grep -oP '"\d+":\{.*?\}'); do
