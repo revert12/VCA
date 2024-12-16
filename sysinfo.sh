@@ -1,5 +1,5 @@
 #!/bin/bash
-
+exec > sysinfo.txt 2>&1
 # Display OS version using /etc/os-release
 echo "Operating System Information:"
 cat /etc/os-release | grep -E 'NAME|VERSION'
@@ -33,57 +33,74 @@ else
 fi
 
 
-# API 요청 보내기 (wget 사용)
+# API (VCA Version Check)
 response=$(wget -qO- --user=admin --password=admin http://127.0.0.1:8080/api/software.json)
 
-# JSON 데이터에서 "string" 키에 해당하는 값만 추출
-string_value=$(echo "$response" | grep -oP '"string":"[^"]+"' | sed 's/"string":"//g' | sed 's/"$//g')
+if [ $? -eq 0 ]; then
+    # VCA Version 값 추출
+    string_value=$(echo "$response" | grep -oP '"string":"[^"]+"' | sed 's/"string":"//g' | sed 's/"$//g')
+    echo -e "\nVCA Version:$string_value"
+else
+    echo "Error: Failed to fetch VCA version from the API. Skipping this step."
+fi
 
-echo -e "\nVCA Version:$string_value"
+# SSL 인증서 (Forensics Version Check)
+server_cert=$(openssl s_client -connect 127.0.0.1:8000 -showcerts </dev/null 2>/dev/null | openssl x509 -outform PEM)
 
-# API 요청 보내기 (wget 사용)
-response=$(wget -qO- --user=admin --password=admin http://127.0.0.1:8002/api.json)
+if [ $? -eq 0 ]; then
+    # Post 요청 (Forensics Version Check)
+    response=$(wget -qO- \
+      --ca-certificate=<(echo "$server_cert") \
+      --method=POST \
+      --header="Content-Type: application/json" \
+      --body-data='{"id": "admin", "pw": "admin"}' \
+      https://127.0.0.1:8000/v1/auth/login)
 
-# JSON 데이터에서 "string" 키에 해당하는 값만 추출
-string_value=$(echo "$response" | grep -oP '"string":"[^"]+"' | sed 's/"string":"//g' | sed 's/"$//g')
+    # token 값 추출 (Forensics Version Check)
+    token=$(echo "$response" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
 
-echo -e "Forensics MetDect Version:$string_value"
+    if [ -n "$token" ]; then
+        # Forensics Version 요청 (토큰 유효성 확인)
+        version=$(wget -qO- \
+          --ca-certificate=<(echo "$server_cert") \
+          --method=GET \
+          --header="Authorization: Bearer $token" \
+          --header="Accept: application/json" \
+          https://127.0.0.1:8000/v1/plugins/info | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
 
-# API 요청 보내기 (wget 사용)
+        echo -e "Forensics Version: $version"
+    else
+        echo "Error: Token not found in the response. Skipping this step."
+    fi
+else
+    echo "Error: Failed to fetch Forensics version from the API. Skipping this step."
+fi
+
+# API (VCA license Check)
 response=$(wget -qO- --user=admin --password=admin http://127.0.0.1:8080/api/licenses.json)
 
-# 'vca' 항목 전체 추출 (중첩된 항목들도 모두 포함)
-vca_info=$(echo "$response" | grep -oP '"vca":\{.*\}' | sed 's/\\//g')
+if [ $? -eq 0 ]; then
+    # vca total (VCA license Check)
+    vca_info=$(echo "$response" | grep -oP '"vca":\{.*\}' | sed 's/\\//g')
 
-# 각 라이센스에 대한 정보를 출력
-for license_info in $(echo "$vca_info" | grep -oP '"\d+":\{.*?\}'); do
-    # License ID 추출
-    license_id=$(echo "$license_info" | grep -oP '"\d+"' | tr -d '"')
-    
-    # License 이름 추출
-    license_name=$(echo "$license_info" | grep -oP '"name":"[^"]+"' | sed 's/"name":"//g' | sed 's/"$//g')
+    for license_info in $(echo "$vca_info" | grep -oP '"\d+":\{.*?\}'); do
+        license_id=$(echo "$license_info" | grep -oP '"\d+"' | tr -d '"')
+        license_name=$(echo "$license_info" | grep -oP '"name":"[^"]+"' | sed 's/"name":"//g' | sed 's/"$//g')
+        license_code=$(echo "$license_info" | grep -oP '"code":\d+' | sed 's/"code"://g')
+        license_=$(echo "$license_info" | grep -oP '"license":\s?"[^"]+"' | sed 's/"license":\s*"//g' | sed 's/"//g' | fold -w 50)
+        license_token=$(echo "$license_info" | grep -oP '"token":"[^"]+"' | sed 's/"token":"//g' | sed 's/"$//g') 
+        channels=$(echo "$license_info" | grep -oP '"channels":\d+' | sed 's/"channels"://g')
 
-    # License 코드 추출
-    license_code=$(echo "$license_info" | grep -oP '"code":\d+' | sed 's/"code"://g')
-
-    # License 추출
-    license_=$(echo "$license_info" | grep -oP '"license":\d+' | sed 's/"code"://g')
-
-    # token 토큰 추출 (하이픈 포함한 문자열 처리)
-    license_token=$(echo "$license_info" | grep -oP '"token":"[^"]+"' | sed 's/"token":"//g' | sed 's/"$//g')
-        
-    # 'channels' 단일 값 처리
-    channels=$(echo "$license_info" | grep -oP '"channels":\d+' | sed 's/"channels"://g')
-
-    # 결과 출력
-    echo "VCA License: "
-    echo "License ID: $license_id"
-    echo "License Name: $license_name"
-    echo "License Code: $license_code"
-    echo "License token: $license_"
-    echo "License token: $license_token"
-    echo "License Channels: $channels"
-    echo "------------------------------"
-done
-# 'vca' 항목 출력 (디버깅용)
-#echo "$vca_info"
+        # result
+        echo -e "VCA License:"
+        echo -e "License ID:$license_id"
+        echo -e "License Name:$license_name"
+        echo -e "License Code:$license_code"
+        echo -e "License:\n$license_"
+        echo -e "License token:$license_token"
+        echo -e "License Channels:$channels"
+        echo "------------------------------"
+    done
+else
+    echo "Error: Failed to fetch VCA license Check from the API. Skipping this step."
+fi
