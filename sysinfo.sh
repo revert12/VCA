@@ -44,6 +44,15 @@ else
     echo "Error: Failed to fetch VCA version from the API. Skipping this step."
 fi
 
+# API (VCA GUID Check)
+response=$(wget -qO- --user=admin --password=admin http://127.0.0.1:8080/api/hardware.json)
+
+if [ $? -eq 0 ]; then
+	# Extracting the "guid" value
+	guid=$(echo "$response" | grep -oP '"guid":"\K[^"]+')
+
+	echo -e "Guid:$guid\n"
+fi
 # SSL 인증서 (Forensics Version Check)
 server_cert=$(openssl s_client -connect 127.0.0.1:8000 -showcerts </dev/null 2>/dev/null | openssl x509 -outform PEM)
 
@@ -104,3 +113,5 @@ if [ $? -eq 0 ]; then
 else
     echo "Error: Failed to fetch VCA license Check from the API. Skipping this step."
 fi
+echo -e "services status (port)"
+sudo ss -tulnp | grep -E '8080|8000'
