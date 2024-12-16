@@ -66,7 +66,10 @@ for license_info in $(echo "$vca_info" | grep -oP '"\d+":\{.*?\}'); do
     # License 코드 추출
     license_code=$(echo "$license_info" | grep -oP '"code":\d+' | sed 's/"code"://g')
 
-    # token 코드 추출 (하이픈 포함한 문자열 처리)
+    # License 추출
+    license_=$(echo "$license_info" | grep -oP '"license":\d+' | sed 's/"code"://g')
+
+    # token 토큰 추출 (하이픈 포함한 문자열 처리)
     license_token=$(echo "$license_info" | grep -oP '"token":"[^"]+"' | sed 's/"token":"//g' | sed 's/"$//g')
         
     # 'channels' 단일 값 처리
@@ -77,6 +80,7 @@ for license_info in $(echo "$vca_info" | grep -oP '"\d+":\{.*?\}'); do
     echo "License ID: $license_id"
     echo "License Name: $license_name"
     echo "License Code: $license_code"
+    echo "License token: $license_"
     echo "License token: $license_token"
     echo "License Channels: $channels"
     echo "------------------------------"
