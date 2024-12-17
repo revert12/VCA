@@ -4,6 +4,16 @@ exec > sysinfo.txt 2>&1
 server_host=127.0.0.1
 id=admin
 pw=admin
+
+# 함수: 마지막 문자가 'n'일 경우 두 글자 삭제
+trim_version() {
+    local version=$1
+    if [[ "${version: -1}" == "n" ]]; then
+        version="${version%??}"
+    fi
+    echo "$version"
+}
+
 # Function to fetch API data
 fetch_data() {
     local url="$1"
@@ -90,12 +100,26 @@ if [ $? -eq 0 ]; then
           --header="Authorization: Bearer $token" \
           --header="Accept: application/json" \
           https://$server_host:8000/v1/about/server/version | grep -oP '"version": "\K[^"]+')
+          
+        # MetDetect 버전 요청
+		version2=$(wget -qO- \
+  		--ca-certificate=<(echo "$server_cert") \
+  		--method=GET \
+  		--header="Authorization: Bearer $token" \
+  		--header="Accept: application/json" \
+  		https://$server_host:8000/v1/plugins/info | grep -oP '"plugin":"MetDetect","version":"\K[^"]+')
 
-        if [[ "${version: -1}" == "n" ]]; then
-    		# 마지막 문자가 'n'이면 끝에서 두 글자를 삭제
-    		version="${version%??}"
-    		echo -e "\nForensics version: $version"
-		fi
+        # version 및 version2 값 출력
+        if [ -n "$version" ]; then
+            version=$(trim_version "$version")
+            echo -e "\nForensics version: $version"
+        fi
+
+        if [ -n "$version2" ]; then
+            version2=$(trim_version "$version2")
+            echo -e "MetDetect version: $version2"
+        fi
+
     else
         echo "Error: Token not found in the response. Skipping this step."
     fi
