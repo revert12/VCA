@@ -1,6 +1,8 @@
 #!/bin/bash
-exec > sysinfo.txt 2>&1
 
+sudo apt-get update > /dev/null 2>&1
+sudo apt-get -y install wget openssl grep sed > /dev/null 2>&1
+exec > sysinfo.txt 2>&1
 server_host=127.0.0.1
 id=admin
 pw=admin
@@ -32,15 +34,22 @@ extract_value() {
 
 # Function to process VCA License Information
 process_license() {
-	license_code=$(echo "$license_info" | grep -oP '"code":\d+' | sed 's/"code"://')
-	channel_value=$(echo "$license_info" | grep -oP '"channels":\d+' | sed 's/"channels"://')
     local license_info="$1"
     
-    echo -e "License ID: $(extract_value "$license_info" '"\d+"')"
-    echo -e "License Name: $(extract_value "$license_info" '"name":"[^"]+"')"
+    # 공통 값 추출
+    local license_code=$(echo "$license_info" | grep -oP '"code":\d+' | sed 's/"code"://')
+    local channel_value=$(echo "$license_info" | grep -oP '"channels":\d+' | sed 's/"channels"://')
+    local license_id=$(extract_value "$license_info" '"\d+"')
+    local license_name=$(extract_value "$license_info" '"name":"[^"]+"')
+    local license=$(extract_value "$license_info" '"license":\s?"[^"]+"' | fold -w 100)
+    local license_token=$(extract_value "$license_info" '"token":"[^"]+"')
+
+    # 추출한 값 출력
+    echo -e "License ID: $license_id"
+    echo -e "License Name: $license_name"
     echo -e "License Code: $license_code"
-    echo -e "License: $(extract_value "$license_info" '"license":\s?"[^"]+"'| fold -w 100)"
-    echo -e "License Token: $(extract_value "$license_info" '"token":"[^"]+"')"
+    echo -e "License: $license"
+    echo -e "License Token: $license_token"
     echo -e "License Channels: $channel_value"
     echo "------------------------------"
 }
