@@ -40,18 +40,21 @@ extract_value() {
 process_license() {
     local license_info="$1"
 
-    license_code=$(echo "$license_info" | grep -oP '"code":\d+' | sed 's/"code"://')
-    channel_value=$(echo "$license_info" | grep -oP '"channels":\d+' | sed 's/"channels"://')
-
     echo -e "License ID: $(extract_value "$license_info" '"\d+"')"
     echo -e "License Name: $(extract_value "$license_info" '"name":"[^"]+"')"
-    echo -e "License Code: $license_code"
+    echo -e "License Code: $(echo "$license_info" | grep -oP '"code":\s*\d+' | sed 's/"code":\s*//')"
+
     echo -e "License: $(extract_value "$license_info" '"license":\s?"[^"]+"' | fold -w 100)"
     echo -e "License Token: $(extract_value "$license_info" '"token":"[^"]+"')"
-    echo -e "License Channels: $channel_value"
+    echo -e "License Channels: $(echo "$license_info" | grep -oP '"channels":\d+' | sed 's/"channels"://')"
+	
+# ex)
+# echo -e "License Expired: $(echo "$license_info" | grep -oP '"expired":\s*(true|false)' | sed 's/"expired":\s*//')"
+    
     echo "------------------------------"
-}
 
+    
+}
 # Display system information
 display_system_info() {
     # OS Information
