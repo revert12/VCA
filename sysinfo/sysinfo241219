@@ -124,20 +124,28 @@ fetch_forensics_version() {
             # Trim and output the versions
             if [ -n "$version" ]; then
                 version=$(trim_version "$version")
-                echo -e "\nForensics version: $version"
+                echo -e "\nForensics Version: $version"
             fi
 
             if [ -n "$version2" ]; then
                 version2=$(trim_version "$version2")
-                echo -e "MetDetect version: $version2"
+                echo -e "MetDetect Version: $version2"
             fi
             if [ -n "$version3" ]; then
                 version3=$(trim_version "$version3")
-                echo -e "MetDetect SDK version: $version3"
+                echo -e "MetDetect SDK Version: $version3"
             fi
+
+
+
+
         else
             echo "Error: Token not found in the response. Skipping this step."
         fi
+        client_version=$(sed -n "s/.*\"client\":\s*\"\([^\"]*\)\".*/\1/p" /usr/lib/forensics/resources/app/.webpack/renderer/main_window/index.js)
+
+        # 확인 출력
+        echo "Client version is: $client_version"
     else
         echo "Error: Failed to fetch Forensics version from the API."
     fi
