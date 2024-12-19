@@ -5,7 +5,8 @@ sudo apt-get update > /dev/null 2>&1
 sudo apt-get install wget openssl grep sed -y > /dev/null 2>&1
 
 # Redirect output to sysinfo.txt
-exec > sysinfo.txt 2>&1
+current_time=$(date +"%Y-%m-%d_%H-%M-%S")
+exec > "sysinfo_$current_time.txt" 2>&1
 
 # Server credentials
 server_host=127.0.0.1
