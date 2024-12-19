@@ -1,0 +1,189 @@
+#!/bin/bash
+
+# Update and install necessary packages
+sudo apt-get update > /dev/null 2>&1
+sudo apt-get install wget openssl grep sed -y > /dev/null 2>&1
+
+# Redirect output to sysinfo.txt
+exec > sysinfo.txt 2>&1
+
+# Server credentials
+server_host=127.0.0.1
+id=admin
+pw=admin
+
+# Function: Last character is 'n', remove the last two characters
+trim_version() {
+    local version=$1
+    if [[ "${version: -1}" == "n" ]]; then
+        version="${version%??}"
+    fi
+    echo "$version"
+}
+
+# Function to fetch data using API
+fetch_data() {
+    local url="$1"
+    local user="$2"
+    local password="$3"
+    wget -qO- --user="$user" --password="$password" "$url"
+}
+
+# Function to extract values from JSON response using regex
+extract_value() {
+    local response="$1"
+    local regex="$2"
+    echo "$response" | grep -oP "$regex" | sed -E 's/[^:]+:\s*"([^"]+)"/\1/'
+}
+
+# Function to process VCA License Information
+process_license() {
+    local license_info="$1"
+
+
+    
+        echo -e "License ID: $(extract_value "$license_info" '"\d+"')"
+        echo -e "License Name: $(extract_value "$license_info" '"name":"[^"]+"')"
+        echo -e "License Code: $(echo "$license_info" | grep -oP '"code":\s*\d+' | sed 's/"code":\s*//')"
+        echo -e "License: $(extract_value "$license_info" '"license":\s?"[^"]+"' | fold -w 100)"
+        echo -e "License Token: $(extract_value "$license_info" '"token":"[^"]+"')"
+        echo -e "License Channels: $(echo "$license_info" | grep -oP '"channels":\d+' | sed 's/"channels"://')"
+        echo "------------------------------"
+
+
+}
+
+# Display system information
+display_system_info() {
+    # OS Information
+    echo -e "\nOperating System Information:"
+    cat /etc/os-release | grep -E 'NAME|VERSION'
+    
+    # CPU Information
+    echo -e "\nCPU Information:"
+    cat /proc/cpuinfo | grep -E "model name|physical id" | sort | uniq
+    
+    # Memory Information
+    echo -e "\nMemory Information:"
+    free -h
+    
+    # GPU Information
+    if command -v nvidia-smi &>/dev/null; then
+        echo -e "\nGPU Information:"
+        nvidia-smi --query-gpu=name --format=csv,noheader | nl
+        echo -e "\nNVIDIA Driver Version:"
+        nvidia-smi --query-gpu=driver_version --format=csv,noheader
+    else
+        echo -e "\nNo NVIDIA GPU detected or NVIDIA driver is not installed."
+    fi
+    
+    # CUDA Version
+    if [ -f /usr/local/cuda/bin/nvcc ]; then
+        echo -e "\nCUDA Version:"
+        /usr/local/cuda/bin/nvcc --version | grep "release" | awk '{print $5}' | sed 's/,//g'
+    else
+        echo -e "\nCUDA not installed or nvcc not found in /usr/local/cuda."
+    fi
+}
+
+# Fetch server certificate (Forensics Version Check)
+fetch_forensics_version() {
+    server_cert=$(openssl s_client -connect $server_host:8000 -showcerts </dev/null 2>/dev/null | openssl x509 -outform PEM)
+    if [ $? -eq 0 ]; then
+        response=$(wget -qO- \
+            --ca-certificate=<(echo "$server_cert") \
+            --method=POST \
+            --header="Content-Type: application/json" \
+            --body-data="{\"id\": \"$id\", \"pw\": \"$pw\"}" \
+            https://$server_host:8000/v1/auth/login)
+
+        token=$(echo "$response" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+
+        if [ -n "$token" ]; then
+            # Fetch versions using token
+            version=$(wget -qO- \
+                --ca-certificate=<(echo "$server_cert") \
+                --method=GET \
+                --header="Authorization: Bearer $token" \
+                --header="Accept: application/json" \
+                https://$server_host:8000/v1/about/server/version | grep -oP '"version": "\K[^"]+')
+
+            version2=$(wget -qO- \
+                --ca-certificate=<(echo "$server_cert") \
+                --method=GET \
+                --header="Authorization: Bearer $token" \
+                --header="Accept: application/json" \
+                https://$server_host:8000/v1/plugins/info | grep -oP '"plugin":"MetDetect","version":"\K[^"]+')
+                
+            version3=$(fetch_data "http://$server_host:8002/api/software.json" "$id" "$pw")
+            if [ $? -eq 0 ] && [ -n "$version3" ]; then
+                version3=$(extract_value "$version3" '"string":"[^"]+"')
+            fi
+
+            # Trim and output the versions
+            if [ -n "$version" ]; then
+                version=$(trim_version "$version")
+                echo -e "\nForensics version: $version"
+            fi
+
+            if [ -n "$version2" ]; then
+                version2=$(trim_version "$version2")
+                echo -e "MetDetect version: $version2"
+            fi
+            if [ -n "$version3" ]; then
+                version3=$(trim_version "$version3")
+                echo -e "MetDetect SDK version: $version3"
+            fi
+        else
+            echo "Error: Token not found in the response. Skipping this step."
+        fi
+    else
+        echo "Error: Failed to fetch Forensics version from the API."
+    fi
+}
+
+# Loop through ports 8080, 8081, and 8082
+check_vca_info() {
+    local port=$1
+    local response
+
+    # Check VCA Version
+    response=$(fetch_data "http://$server_host:$port/api/software.json" "$id" "$pw")
+    if [ $? -eq 0 ] && [ -n "$response" ]; then
+        echo -e "\n==== Checking Port $port ===="
+        string_value=$(extract_value "$response" '"string":"[^"]+"')
+        echo -e "VCA Version (Port $port): $string_value"
+    fi
+
+    # Check VCA GUID
+    response=$(fetch_data "http://$server_host:$port/api/hardware.json" "$id" "$pw")
+    if [ $? -eq 0 ] && [ -n "$response" ]; then
+        guid=$(extract_value "$response" '"guid":"\K[^"]+')
+        echo -e "Guid : $guid"
+        echo "------------------------------"
+    fi
+
+    # Check VCA Licenses
+    response=$(fetch_data "http://$server_host:$port/api/licenses/vca.json" "$id" "$pw")
+
+    if [ "$response" == "{}" ]; then
+        # If the response is empty JSON, pass and do nothing
+        echo "No license registered"
+        echo "------------------------------"
+    else
+        # If vca_info is not empty, process each license
+        for license_info in $(echo "$response" | grep -oP '"\d+":\{.*?\}'); do
+            process_license "$license_info"
+    done
+
+fi
+}
+
+# Main Execution
+display_system_info
+fetch_forensics_version
+
+# Loop through ports 8080, 8081, 8082
+for port in 8080 8081 8082; do
+    check_vca_info $port
+done
