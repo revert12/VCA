@@ -73,7 +73,7 @@ process_license() {
         if [ "$license_expired" == "true" ]; then
             echo -e "License Period: The license has expired."
         else  
-            echo -e "License Period: subscription license $remaining_days days remaining."
+            echo -e "License Period: subscription, license $remaining_days days remaining."
         fi
     else
         echo -e "License Period: Perpetual license."
