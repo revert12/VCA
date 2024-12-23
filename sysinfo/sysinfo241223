@@ -158,7 +158,7 @@ fetch_forensics_version() {
     # Display versions
     [ -n "$version" ] && echo -e "\nForensics Version: $(trim_version "$version")"
     [ -n "$version2" ] && echo -e "MetDetect Version: $(trim_version "$version2")"
-    [ -n "$version3" ] && echo -e "MetDetect SDK Version: $(trim_version "$version3")"
+    #[ -n "$version3" ] && echo -e "MetDetect SDK Version: $(trim_version "$version3")"
 
     client_version=$(sed -n "s/.*\"client\":\s*\"\([^\"]*\)\".*/\1/p" /usr/lib/forensics/resources/app/.webpack/renderer/main_window/index.js)
     echo "Client version is: $client_version"
