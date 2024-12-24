@@ -8,28 +8,27 @@ $ID = "admin"
 $PW = "admin"
 
 # HTTP 요청을 보내는 함수 (API 호출)
-function fetch_data {
+function Fetch-Data {
     param($url, $user, $password)
     
     try {
-        # URL로 데이터 요청 (인증 정보 포함)
         $response = Invoke-WebRequest -Uri $url -Method Get -Credential (New-Object System.Management.Automation.PSCredential("${user}", (ConvertTo-SecureString "${password}" -AsPlainText -Force))) -ErrorAction Stop
         return $response.Content
     } catch {
-        # 오류 발생 시 null 반환
+        
         return $null
     }
 }
 
 # 로그 메시지를 파일과 콘솔에 출력하는 함수
-function log_output {
+function Log-Output {
     param($message)
     Write-Host $message  # 콘솔에 출력
     $message | Out-File -FilePath $log_file -Append  # 로그 파일에 추가
 }
 
 # JSON 응답에서 특정 값을 추출하는 함수
-function extract_value_from_json {
+function Extract-ValueFrom-Json {
     param($json, $key)
     
     try {
@@ -42,26 +41,19 @@ function extract_value_from_json {
 }
 
 # 라이센스 정보를 출력하는 함수
-function display_license_info {
+function Display-LicenseInfo {
     param($id, $license_info)
 
-    # JSON에서 필요한 필드 추출
     $license = $license_info.license
     $token = $license_info.token
     $name = $license_info.name
     $code = $license_info.code
     $channels = $license_info.channels
-    $used_channels = $license_info.used_channels
-    $zones = $license_info.zones
-    $rules = $license_info.rules
-    $counters = $license_info.counters
     $evaluation = $license_info.evaluation
     $expired = $license_info.expired
     $days_remaining = $license_info.days_remaining
-    $suspended = $license_info.suspended
     $features = $license_info.features -join ", "
 
-    # 출력할 내용 구성
     $output = @"
 -------------------------------------------------
 License ID: ${id}
@@ -69,9 +61,9 @@ License Name: ${name}
 License Code: ${code}
 License Token: ${token}
 License: ${license}
-License channels: ${channels}
+License Channels: ${channels}
 "@
-
+    
     # 라이센스 기간에 따라 추가 정보 출력
     if ($evaluation -eq "true") {
         if ($expired -eq "true") {
@@ -83,118 +75,105 @@ License channels: ${channels}
         $output += "`nLicense Period: Perpetual license."
     }
 
-    # 콘솔과 파일에 출력
-    log_output $output
+    Log-Output $output
 }
 
 # VCA 정보 체크 함수
-function check_vca_info {
+function Check-VCAInfo {
     param($port)
 
     # VCA 버전 확인
-    $response = fetch_data "http://${SERVER_HOST}:${port}/api/software.json" $ID $PW
+    $response = Fetch-Data "http://${SERVER_HOST}:${port}/api/software.json" $ID $PW
     if ($response) {
-        log_output "`n==== Checking Port ${port} ===="
+        Log-Output "`n==== Checking Port ${port} ===="
         $version = (ConvertFrom-Json $response).string
-        log_output "VCA Version (Port ${port}): ${version}"
+        Log-Output "VCA Version (Port ${port}): ${version}"
     } else {
         return  # 서버에 연결되지 않으면 이 함수 종료
     }
 
     # VCA GUID 확인
-    $response = fetch_data "http://${SERVER_HOST}:${port}/api/hardware.json" $ID $PW
+    $response = Fetch-Data "http://${SERVER_HOST}:${port}/api/hardware.json" $ID $PW
     if ($response) {
         $guid = (ConvertFrom-Json $response).guid
-        log_output "Guid : ${guid}"
+        Log-Output "Guid : ${guid}"
     }
 
     # VCA 라이센스 정보 확인
-    $response = fetch_data "http://${SERVER_HOST}:${port}/api/licenses/vca.json" $ID $PW
+    $response = Fetch-Data "http://${SERVER_HOST}:${port}/api/licenses/vca.json" $ID $PW
     if ($response -eq "{}") {
-        log_output "No license registered"
+        Log-Output "No license registered"
     } elseif ($response) {
         try {
             $responseObj = $response | ConvertFrom-Json
             foreach ($key in $responseObj.PSObject.Properties.Name) {
-                # $key를 ID로 사용하여 라이센스 정보 출력
                 $license_info = $responseObj.$key
-                display_license_info $key $license_info
+                Display-LicenseInfo $key $license_info
             }
         } catch {
-            log_output "Error processing the license data for port ${port}: $_"
+            Log-Output "Error processing the license data for port ${port}: $_"
         }
     } else {
-        log_output "Server not found at Port ${port}, skipping."
+        Log-Output "Server not found at Port ${port}, skipping."
     }
 }
 
 # 시스템 정보 출력 시작
+function Display-SystemInfo {
+    # 운영 체제 정보 출력
+    Log-Output "Operating System Information:"
+    $os = Get-WmiObject -Class Win32_OperatingSystem
+    Log-Output "Caption: $($os.Caption)"  # 운영 체제 이름
+    Log-Output "Version: $($os.Version)"  # 운영 체제 버전
 
-# 운영 체제 정보 출력
-log_output "Operating System Information:"
-$os = Get-WmiObject -Class Win32_OperatingSystem
-log_output "Caption: $($os.Caption)"  # 운영 체제 이름
-log_output "Version: $($os.Version)"  # 운영 체제 버전
-
-# CPU 정보 출력
-log_output "`nCPU Information:"
-$cpus = Get-WmiObject -Class Win32_Processor
-$cpus | ForEach-Object -Begin { $i=0 } {
-    log_output "$i. Name: $($_.Name), Cores: $($_.NumberOfCores)"  # CPU 이름과 코어 수 출력
-    $i++
-}
-
-# 그래픽 카드 정보 출력
-log_output "`nGraphics Card Information:"
-$gpus = Get-WmiObject -Class Win32_VideoController
-$gpus | ForEach-Object -Begin { $i=0 } {
-    log_output "$i. Name: $($_.Name), Video Memory: $([math]::round($_.AdapterRAM / 1GB, 2)) GB"  # 그래픽 카드 이름과 비디오 메모리 출력
-    $i++
-}
-
-# 메모리 정보 출력
-log_output "`nMemory Information:"
-$memory = Get-WmiObject -Class Win32_OperatingSystem
-$total_memory = [math]::round($memory.TotalVisibleMemorySize / 1KB / 1024, 2)  # 총 메모리 용량 (GB 단위)
-$free_memory = [math]::round($memory.FreePhysicalMemory / 1KB / 1024, 2)  # 사용 가능한 메모리 용량 (GB 단위)
-
-log_output "Total Memory (GB): $total_memory"  # 총 메모리 출력
-log_output "Free Memory (GB): $free_memory"    # 사용 가능한 메모리 출력
-
-# 그래픽 카드 드라이버 정보 출력
-log_output "`nGraphics Driver Information:"
-$gpus | ForEach-Object {
-    log_output "$i. Driver: $($_.Name), Version: $($_.DriverVersion), Date: $($_.DriverDate), Provider: $($_.DriverProvider)"  # 그래픽 카드 드라이버 정보 출력
-}
-
-
-# CUDA 버전 정보 출력
-log_output "`nCUDA Version Information:"
-$cuda_version = & nvcc --version
-$cuda_version_filtered = ($cuda_version | Select-String -Pattern "compilation tools, release \d+\.\d+").Line  # CUDA 버전 필터링
-log_output "CUDA Driver Version: $cuda_version_filtered"  # CUDA 드라이버 버전 출력
-
-# API (VCA 버전 확인)
-$response = fetch_data "http://${SERVER_HOST}:${port}/api/software.json" $ID $PW  # VCA 버전 확인 API 호출
-
-if ($response -ne $null) {
-    # JSON에서 string 값 추출 (정규식 사용)
-    $string_value = extract_value_from_json $response '"string":"([^"]+)"'
-    
-    if ($string_value -ne $null) {
-        log_output "`n==== Checking Port $port ===="
-        log_output "`nVCA Version (Port $port): $string_value"  # VCA 버전 출력
-        # VCA Version 정보도 로그에 저장
-        log_output "VCA Version (Port $port): $string_value"
+    # CPU 정보 출력
+    Log-Output "`nCPU Information:"
+    $cpus = Get-WmiObject -Class Win32_Processor
+    $cpus | ForEach-Object -Begin { $i=0 } {
+        Log-Output "$i. $($_.Name), Cores: $($_.NumberOfCores)"  # CPU 이름과 코어 수 출력
+        $i++
     }
+
+    # 그래픽 카드 정보 출력
+    Log-Output "`nGraphics Card Information:"
+    $gpus = Get-WmiObject -Class Win32_VideoController
+    $gpus | ForEach-Object -Begin { $i=0 } {
+        Log-Output "$i. $($_.Name), Video Memory: $([math]::round($_.AdapterRAM / 1GB, 2)) GB"  # 그래픽 카드 이름과 비디오 메모리 출력
+        $i++
+    }
+
+    # 메모리 정보 출력
+    Log-Output "`nMemory Information:"
+    $memory = Get-WmiObject -Class Win32_OperatingSystem
+    $total_memory = [math]::round($memory.TotalVisibleMemorySize / 1KB / 1024, 2)  # 총 메모리 용량 (GB 단위)
+    $free_memory = [math]::round($memory.FreePhysicalMemory / 1KB / 1024, 2)  # 사용 가능한 메모리 용량 (GB 단위)
+
+    Log-Output "Total Memory (GB): $total_memory"  # 총 메모리 출력
+    Log-Output "Free Memory (GB): $free_memory"    # 사용 가능한 메모리 출력
+
+    # 그래픽 카드 드라이버 정보 출력
+    Log-Output "`nGraphics Driver Information:"
+    $gpus | ForEach-Object {
+        Log-Output "Driver: $($_.Name), Version: $($_.DriverVersion), Date: $($_.DriverDate), Provider: $($_.DriverProvider)"  # 그래픽 카드 드라이버 정보 출력
+    }
+
+    # CUDA 버전 정보 출력
+    Log-Output "`nCUDA Version Information:"
+    $cuda_version = & nvcc --version
+    $cuda_version_filtered = ($cuda_version | Select-String -Pattern "compilation tools, release \d+\.\d+").Line  # CUDA 버전 필터링
+    Log-Output "CUDA Driver Version: $cuda_version_filtered"  # CUDA 드라이버 버전 출력
 }
-
-
 
 # 메인 실행 (각 포트별로 VCA 정보 체크)
-foreach ($port in 8080, 8081, 8082) {
-    check_vca_info $port
+function Main {
+    Display-SystemInfo
+
+    foreach ($port in 8080, 8081, 8082) {
+        Check-VCAInfo $port
+    }
+
+    Log-Output "`nEnd of Log"
 }
 
-# 시스템 정보 출력 끝
-log_output "`nEnd of Log"
+# 메인 함수 실행
+Main
