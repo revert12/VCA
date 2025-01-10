@@ -88,7 +88,8 @@ display_system_info() {
     cat /etc/os-release | grep -E 'NAME|VERSION'
     
     echo -e "\nCPU Information:"
-    cat /proc/cpuinfo | grep -E "model name|physical id" | awk 'BEGIN {id=-1} /model name/ {model=$0} /physical id/ {if (id != $NF) {id=$NF; print model; print $0}}'
+
+    cat /proc/cpuinfo | grep -E "model name|physical id" | awk 'BEGIN {id=-1} /physical id/ {if (id != $NF) {id=$NF; print $0; print model}} /model name/ {model=$0}'
     
     echo -e "\nMemory Information:"
     free -h
@@ -108,8 +109,8 @@ check_gpu_info() {
         if [ "$gpu_count" -gt 0 ]; then
             for ((i=0; i<gpu_count; i++)); do
                 # 각 GPU의 device id와 model name 출력
-                echo -e "  device id: $(nvidia-smi --query-gpu=index --format=csv,noheader -i $i)"
-                echo -e "  model name: $(nvidia-smi --query-gpu=name --format=csv,noheader -i $i)"
+                echo -e "device id: $(nvidia-smi --query-gpu=index --format=csv,noheader -i $i)"
+                echo -e "model name: $(nvidia-smi --query-gpu=name --format=csv,noheader -i $i)"
                 echo
             done
         else
