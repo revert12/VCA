@@ -100,12 +100,29 @@ display_system_info() {
 check_gpu_info() {
     if command -v nvidia-smi &>/dev/null; then
         echo -e "\nGPU Information:"
-        nvidia-smi --query-gpu=name --format=csv,noheader | nl -v 0
+        
+        # GPU 개수 확인
+        gpu_count=$(nvidia-smi --query-gpu=count --format=csv,noheader,nounits)
+
+        # GPU가 하나 이상 있을 경우
+        if [ "$gpu_count" -gt 0 ]; then
+            for ((i=0; i<gpu_count; i++)); do
+                # 각 GPU의 device id와 model name 출력
+                echo -e "  device id: $(nvidia-smi --query-gpu=index --format=csv,noheader -i $i)"
+                echo -e "  model name: $(nvidia-smi --query-gpu=name --format=csv,noheader -i $i)"
+                echo
+            done
+        else
+            echo -e "\nNo NVIDIA GPU detected."
+        fi
+
+        # NVIDIA 드라이버 버전 출력
         echo -e "\nNVIDIA Driver Version:"
         nvidia-smi --query-gpu=driver_version --format=csv,noheader
     else
         echo -e "\nNo NVIDIA GPU detected or NVIDIA driver is not installed."
     fi
+
     
     check_cuda_version
 }
