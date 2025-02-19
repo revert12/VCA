@@ -178,7 +178,7 @@ fetch_forensics_version() {
     [ -n "$version2" ] && echo -e "MetDetect Version: $(trim_version "$version2")"
     #[ -n "$version3" ] && echo -e "MetDetect SDK Version: $(trim_version "$version3")"
 
-    client_version=$$(sed -n 's/.*"version":\s*"\([^"]*\)".*/\1/p' /usr/lib/forensics/resources/app/package.json)
+    client_version=$(sed -n 's/.*"version":\s*"\([^"]*\)".*/\1/p' /usr/lib/forensics/resources/app/package.json)
     echo "Client version is: $client_version"
 }
 
